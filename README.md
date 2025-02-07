@@ -1,36 +1,135 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Paso 1: Instalar NextAuth.js
+Ejecuta el siguiente comando en la raíz de tu proyecto para instalar NextAuth.js:
 
-## Getting Started
+npm install next-auth@beta
 
-First, run the development server:
+Paso 2: Configurar variables de entorno
+Crea un archivo .env.local en la raíz de tu proyecto y añade las siguientes variables:
 
-```bash
+AUTH_SECRET=tu_clave_secreta_generada
+Para generar una clave secreta, puedes usar:
+npx auth secret
+Configuración para el proveedor de Google
+GOOGLE_CLIENT_ID=tu_client_id_de_google
+GOOGLE_CLIENT_SECRET=tu_client_secret_de_google
+AUTH_SECRET: Es una clave secreta para cifrar tokens y cookies. Puedes generarla con el comando npx auth secret.
+
+GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET: Obtén estas credenciales desde la Consola de APIs de Google.
+
+Paso 3: Crear el archivo de configuración de NextAuth
+Crea un archivo auth.ts en la raíz de tu proyecto (o dentro de una carpeta lib si prefieres organizarlo mejor):
+
+import NextAuth from "next-auth";
+import Google from "next-auth/providers/google";
+
+export const {
+  handlers: { GET, POST },
+  auth,
+  signIn,
+  signOut,
+} = NextAuth({
+  providers: [
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    }),
+  ],
+  secret: process.env.AUTH_SECRET,
+});
+
+Paso 4: Configurar el Route Handler
+Crea un archivo route.ts en app/api/auth/[...nextauth]/route.ts:
+
+import { handlers } from "@/auth"; // Ajusta la ruta según la ubicación de tu archivo auth.ts
+export const { GET, POST } = handlers;
+
+Paso 5: Configurar el SessionProvider
+En tu archivo app/layout.tsx, envuelve tu aplicación con el SessionProvider:
+
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode } from "react";
+
+export default function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <html lang="es">
+      <body>
+        <SessionProvider>{children}</SessionProvider>
+      </body>
+    </html>
+  );
+}
+
+Paso 6: Crear un componente de autenticación
+Crea un componente AuthButton.tsx para manejar el inicio y cierre de sesión:
+
+"use client"; // Asegúrate de que sea un componente de cliente
+
+import { signIn, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+
+export default function AuthButton() {
+  const { data: session } = useSession();
+
+  return (
+    <div>
+      {session ? (
+        <button onClick={() => signOut()}>Salir</button>
+      ) : (
+        <button onClick={() => signIn("google")}>Entrar con Google</button>
+      )}
+    </div>
+  );
+}
+
+Paso 7: Usar el componente en tu aplicación
+Importa y usa el componente AuthButton en tu página principal (app/page.tsx):
+
+import AuthButton from "@/components/AuthButton";
+
+export default function Home() {
+  return (
+    <main>
+      <h1>Bienvenido a mi aplicación</h1>
+      <AuthButton />
+    </main>
+  );
+}
+
+Paso 8: Proteger rutas con middleware (opcional)
+Si quieres proteger rutas, crea un archivo middleware.ts en la raíz de tu proyecto:
+
+export { default } from "next-auth/middleware";
+
+export const config = {
+  matcher: ["/dashboard"], // Protege esta ruta
+};
+
+Paso 9: Probar la aplicación
+Ejecuta tu aplicación:
+
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Navega a http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Haz clic en Entrar con Google y verifica que el inicio de sesión funcione correctamente.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Resumen de pasos
+Instala NextAuth.js: npm install next-auth@beta.
 
-## Learn More
+Configura las variables de entorno en .env.local.
 
-To learn more about Next.js, take a look at the following resources:
+Crea el archivo de configuración auth.ts.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Configura el Route Handler en app/api/auth/[...nextauth]/route.ts.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Envuelve tu aplicación con SessionProvider en app/layout.tsx.
 
-## Deploy on Vercel
+Crea un componente de autenticación (AuthButton.tsx).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Usa el componente en tu aplicación.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+(Opcional) Protege rutas con middleware.
